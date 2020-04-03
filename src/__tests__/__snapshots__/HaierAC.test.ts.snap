@@ -1,0 +1,13 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`HaierAC state$ should work 1`] = `
+Object {
+  "currentTemperature": 21,
+  "fanSpeed": 2,
+  "health": 1,
+  "limits": 0,
+  "mode": 2,
+  "power": 9,
+  "targetTemperature": 28,
+}
+`;
