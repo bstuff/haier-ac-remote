@@ -1,9 +1,14 @@
 {
   "name": "haier-ac-remote",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "homepage": "https://github.com/bstuff/haier-ac-remote",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/bstuff/haier-ac-remote.git"
+  },
   "scripts": {
     "build": "tsc",
     "dev": "npm run build -- --watch",
