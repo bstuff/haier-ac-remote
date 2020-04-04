@@ -2,8 +2,8 @@ import _debug from 'debug';
 import { hexy } from 'hexy';
 import pickBy from 'lodash/pickBy';
 import { Socket } from 'net';
-import { BehaviorSubject, fromEvent, Subject } from 'rxjs';
-import { filter, take, timeout, mapTo } from 'rxjs/operators';
+import { BehaviorSubject, from, fromEvent, Subject, throwError } from 'rxjs';
+import { filter, mapTo, take, timeout, catchError } from 'rxjs/operators';
 
 import { FanSpeed, Limits, Mode, State } from './_types';
 import * as commands from './lib/commands';
@@ -69,6 +69,8 @@ export class HaierAC {
       timeout,
     });
 
+    this._client.setTimeout(this.timeout);
+
     this._rawData$.subscribe((data) => {
       recv(data);
 
@@ -92,7 +94,7 @@ export class HaierAC {
       }
     });
 
-    this._connect();
+    this._connect().catch(logError);
     this._client.on('data', (data) => {
       this._rawData$.next(data);
     });
@@ -108,9 +110,18 @@ export class HaierAC {
   }
 
   protected _connect() {
-    return new Promise((resolve) => {
-      this._client.connect(this.port, this.ip, resolve);
-    });
+    return from(
+      new Promise((resolve) => {
+        this._client.connect(this.port, this.ip, resolve);
+      }),
+    )
+      .pipe(
+        timeout(this.timeout),
+        catchError((err) =>
+          throwError(err.name === 'TimeoutError' ? 'connection timeout error' : err),
+        ),
+      )
+      .toPromise();
   }
 
   protected hello() {

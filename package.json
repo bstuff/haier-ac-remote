@@ -11,7 +11,8 @@
   },
   "scripts": {
     "build": "tsc",
-    "dev": "npm run build -- --watch",
+    "run:example": "DEBUG=* node ./dist/examples/index.js",
+    "example": "rm -rf dist/ && tsc --project ./tsconfig.dev.json && npm run run:example",
     "prepublish": "tsc",
     "test": "jest"
   },
