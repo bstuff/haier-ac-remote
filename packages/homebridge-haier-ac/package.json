@@ -1,0 +1,36 @@
+{
+  "name": "homebridge-haier-ac",
+  "version": "0.1.2",
+  "description": "Haier AC plugin for Homebridge",
+  "author": "Andrew Lavrentev <andrew.lavrentev@gmail.com>",
+  "license": "MIT",
+  "keywords": [
+    "homebridge",
+    "plugin",
+    "haier",
+    "air conditioner"
+  ],
+  "homepage": "https://github.com/bstuff/haier-ac-remote",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/bstuff/haier-ac-remote.git",
+    "directory": "packages/homebridge-haier-ac"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "config-sample.jsonc",
+    "README.md",
+    "dist/"
+  ],
+  "scripts": {
+    "build": "rm -rf ./dist/ && ../../node_modules/.bin/tsc --project ./tsconfig.build.json"
+  },
+  "engines": {
+    "node": ">=8.3.0",
+    "homebridge": ">=0.4.38"
+  },
+  "dependencies": {
+    "haier-ac-remote": "^0.1.1"
+  }
+}

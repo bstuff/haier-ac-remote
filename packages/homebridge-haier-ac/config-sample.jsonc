@@ -1,0 +1,15 @@
+{
+  "accessories": [
+    {
+      "accessory": "HaierAC",
+      // ip address
+      "ip": "192.168.31.11",
+      // mac address
+      "mac": "0007A98E17AC",
+      // display name
+      "name": "Air Conditioner",
+      // 'fan' | 'smart'
+      "treatAutoHeatAs": "fan"
+    }
+  ]
+}

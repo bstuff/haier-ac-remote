@@ -1,0 +1,42 @@
+{
+  "name": "haier-ac-remote",
+  "version": "0.1.1",
+  "description": "A node module remote controller for Haier air conditioner",
+  "keywords": [
+    "haier",
+    "ac",
+    "air",
+    "conditioner",
+    "smart",
+    "home",
+    "remote"
+  ],
+  "author": "Andrew Lavrentev <andrew.lavrentev@gmail.com>",
+  "license": "MIT",
+  "homepage": "https://github.com/bstuff/haier-ac-remote",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/bstuff/haier-ac-remote.git",
+    "directory": "packages/haier-ac-remote"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "README.md",
+    "dist/"
+  ],
+  "scripts": {
+    "build": "rm -rf ./dist/ && ../../node_modules/.bin/tsc --project ./tsconfig.build.json",
+    "run:example": "DEBUG=* node ./dist/examples/index.js",
+    "example": "rm -rf ./dist/ && ../../node_modules/.bin/tsc --project ./tsconfig.json && npm run run:example",
+    "test": "jest"
+  },
+  "dependencies": {
+    "binary-parser": "^1.5.0",
+    "debug": "^4.1.1",
+    "hexy": "^0.3.0",
+    "lodash": "^4.17.15",
+    "rxjs": "^6.5.4"
+  },
+  "devDependencies": {}
+}
