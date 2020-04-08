@@ -38,7 +38,7 @@ class HapHaierAC {
     const config = Object.assign(
       {
         timeout: 3000,
-        treatAutoHeatAs: 'smart',
+        treatAutoHeatAs: 'fan',
       },
       _config,
     );

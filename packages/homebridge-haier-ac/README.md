@@ -15,7 +15,7 @@ Homebridge plugin for controlling Haier Air Conditioner
         - `ip` - IP address of air conditioner
         - `mac` - MAC address of air conditioner in format `0001325476AC`
     - Optional parameters:
-        - `treatAutoHeatAs` - `fan`/`smart` (default `smart`). Select mode binded to 'auto' in homekit
+        - `treatAutoHeatAs` - `fan`/`smart` (default `fan`). Select mode binded to 'auto' in homekit
 
 ## Features
 
