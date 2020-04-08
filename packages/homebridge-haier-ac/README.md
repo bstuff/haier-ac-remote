@@ -17,6 +17,20 @@ Homebridge plugin for controlling Haier Air Conditioner
     - Optional parameters:
         - `treatAutoHeatAs` - `fan`/`smart` (default `fan`). Select mode binded to 'auto' in homekit
 
+## config.json
+
+```json
+"accessories": [
+    {
+        "accessory": "HaierAC",
+        "ip": "192.168.250.102",
+        "mac": "0007A8E578A8",
+        "name": "Living Room Conditioner",
+        "treatAutoHeatAs": "fan"
+    }
+]
+```
+
 ## Features
 
 - Turning AC on and off

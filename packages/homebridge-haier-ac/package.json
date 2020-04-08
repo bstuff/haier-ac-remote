@@ -1,6 +1,6 @@
 {
   "name": "homebridge-haier-ac",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Haier AC plugin for Homebridge",
   "author": "Andrew Lavrentev <andrew.lavrentev@gmail.com>",
   "license": "MIT",
