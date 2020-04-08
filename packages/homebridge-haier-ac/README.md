@@ -1,6 +1,6 @@
 # homebridge-haier-ac
 
-[![npm version](https://badge.fury.io/js/homebridge-haier-ac.svg)](https://badge.fury.io/js/homebridge-haier-ac) <iframe src="https://money.yandex.ru/quickpay/button-widget?targets=%D0%B4%D0%BE%D0%BD%D0%B0%D1%82%D1%8B&default-sum=100&button-text=11&yamoney-payment-type=on&button-size=s&button-color=orange&successURL=&quickpay=small&account=41001836515224&" width="127" height="25" frameborder="0" allowtransparency="true" scrolling="no"></iframe>
+[![npm version](https://badge.fury.io/js/homebridge-haier-ac.svg)](https://badge.fury.io/js/homebridge-haier-ac)
 
 Homebridge plugin for controlling Haier Air Conditioner
 

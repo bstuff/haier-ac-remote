@@ -13,7 +13,7 @@
   ],
   "author": "Andrew Lavrentev <andrew.lavrentev@gmail.com>",
   "license": "MIT",
-  "homepage": "https://github.com/bstuff/haier-ac-remote",
+  "homepage": "https://github.com/bstuff/haier-ac-remote/tree/master/packages/homebridge-haier-ac",
   "repository": {
     "type": "git",
     "url": "git://github.com/bstuff/haier-ac-remote.git",
