@@ -1,16 +1,7 @@
-import { HaierAC, Mode, Limits, FanSpeed } from 'haier-ac-remote';
+import { FanSpeed, HaierAC, Limits, Mode } from 'haier-ac-remote';
+import { API, Logger, AccessoryConfig } from 'homebridge';
 
 import { callbackify } from './callbackify';
-
-let Service: any;
-let Characteristic: any;
-
-type Log = {
-  debug: typeof console.debug;
-  info: typeof console.info;
-  warn: typeof console.warn;
-  error: typeof console.error;
-};
 
 type Config = {
   ip: string;
@@ -18,41 +9,36 @@ type Config = {
   name: string;
   timeout?: number;
   treatAutoHeatAs?: 'smart' | 'fan';
-};
+} & AccessoryConfig;
 
-export function haierAcPlugin(homebridge: any) {
-  Service = homebridge.hap.Service;
-  Characteristic = homebridge.hap.Characteristic;
-
-  homebridge.registerAccessory('homebridge-haier-ac', 'HaierAC', HapHaierAC);
-}
-
-class HapHaierAC {
+export class HapHaierAC {
+  protected readonly _api: API;
   services: any[];
   on = 1;
   _device: HaierAC;
-  log: Log;
+  log: Logger;
   autoMode: Mode;
 
-  constructor(log: Log, _config: Config) {
+  constructor(log: Logger, baseConfig: Config, api: API) {
     const config = Object.assign(
       {
         timeout: 3000,
         treatAutoHeatAs: 'fan',
       },
-      _config,
+      baseConfig,
     );
 
     if (!config.ip) throw new Error('Your must provide IP address of the AC');
     if (!config.mac) throw new Error('Your must provide mac of the AC');
 
-    const info = new Service.AccessoryInformation();
-    const thermostatService = new Service.Thermostat();
-    const fanService = new Service.Fan('Fan speed');
-    const lightService = new Service.Lightbulb('Health');
+    const info = new api.hap.Service.AccessoryInformation();
+    const thermostatService = new api.hap.Service.Thermostat();
+    const fanService = new api.hap.Service.Fanv2('Fan speed');
+    const lightService = new api.hap.Service.Lightbulb('Health');
 
     Object.assign(this, {
       log,
+      _api: api,
       name: config.name,
       services: [info, thermostatService, fanService, lightService],
       autoMode: config.treatAutoHeatAs === 'fan' ? Mode.FAN : Mode.SMART,
@@ -65,22 +51,22 @@ class HapHaierAC {
 
     // Device info
     info
-      .setCharacteristic(Characteristic.Manufacturer, 'Haier')
-      .setCharacteristic(Characteristic.Model, 'AirCond')
-      .setCharacteristic(Characteristic.SerialNumber, 'Undefined');
+      .setCharacteristic(api.hap.Characteristic.Manufacturer, 'Haier')
+      .setCharacteristic(api.hap.Characteristic.Model, 'AirCond')
+      .setCharacteristic(api.hap.Characteristic.SerialNumber, 'Undefined');
 
     // Active
     thermostatService
-      .getCharacteristic(Characteristic.TargetHeatingCoolingState)
+      .getCharacteristic(api.hap.Characteristic.TargetHeatingCoolingState)
       .on('get', callbackify(this.getTargetHeatingCoolingState))
       .on('set', callbackify(this.setTargetHeatingCoolingState));
 
     thermostatService
-      .getCharacteristic(Characteristic.CurrentTemperature)
+      .getCharacteristic(api.hap.Characteristic.CurrentTemperature)
       .on('get', callbackify(this.getCurrentTemperature));
 
     thermostatService
-      .getCharacteristic(Characteristic.TargetTemperature)
+      .getCharacteristic(api.hap.Characteristic.TargetTemperature)
       .setProps({
         minValue: 16,
         maxValue: 30,
@@ -90,12 +76,12 @@ class HapHaierAC {
       .on('set', callbackify(this.setTargetTemperature));
 
     fanService
-      .getCharacteristic(Characteristic.SwingMode)
+      .getCharacteristic(api.hap.Characteristic.SwingMode)
       .on('get', callbackify(this.getSwingMode))
       .on('set', callbackify(this.setSwingMode));
 
     fanService
-      .getCharacteristic(Characteristic.RotationSpeed)
+      .getCharacteristic(api.hap.Characteristic.RotationSpeed)
       .setProps({
         minValue: 0,
         maxValue: 3,
@@ -105,7 +91,7 @@ class HapHaierAC {
       .on('set', callbackify(this.setRotationSpeed));
 
     lightService
-      .getCharacteristic(Characteristic.On)
+      .getCharacteristic(api.hap.Characteristic.On)
       .on('get', callbackify(this.getHealthMode))
       .on('set', callbackify(this.setHealthMode));
   }
@@ -127,23 +113,23 @@ class HapHaierAC {
     const { power, mode } = this._device.state$.value;
 
     if (!power) {
-      return Characteristic.TargetHeatingCoolingState.OFF;
+      return this._api.hap.Characteristic.TargetHeatingCoolingState.OFF;
     }
 
     switch (mode) {
       case Mode.HEAT:
-        return Characteristic.TargetHeatingCoolingState.HEAT;
+        return this._api.hap.Characteristic.TargetHeatingCoolingState.HEAT;
       case Mode.COOL:
-        return Characteristic.TargetHeatingCoolingState.COOL;
+        return this._api.hap.Characteristic.TargetHeatingCoolingState.COOL;
       default:
-        return Characteristic.TargetHeatingCoolingState.AUTO;
+        return this._api.hap.Characteristic.TargetHeatingCoolingState.AUTO;
     }
   };
 
   setTargetHeatingCoolingState = async (state: any) => {
     const { mode, power } = this._device.state$.value;
     try {
-      if (state === Characteristic.TargetHeatingCoolingState.OFF) {
+      if (state === this._api.hap.Characteristic.TargetHeatingCoolingState.OFF) {
         if (power) {
           await this._device.off();
         }
@@ -152,7 +138,7 @@ class HapHaierAC {
       }
 
       switch (state) {
-        case Characteristic.TargetHeatingCoolingState.HEAT:
+        case this._api.hap.Characteristic.TargetHeatingCoolingState.HEAT:
           if (mode !== Mode.HEAT) {
             await this._device.changeState({
               mode: Mode.HEAT,
@@ -160,7 +146,7 @@ class HapHaierAC {
           }
 
           return;
-        case Characteristic.TargetHeatingCoolingState.COOL:
+        case this._api.hap.Characteristic.TargetHeatingCoolingState.COOL:
           if (mode !== Mode.COOL) {
             await this._device.changeState({
               mode: Mode.COOL,
@@ -218,15 +204,17 @@ class HapHaierAC {
     const { power, limits } = this._device.state$.value;
 
     if (limits === Limits.ONLY_VERTICAL && power) {
-      return Characteristic.SwingMode.SWING_ENABLED;
+      return this._api.hap.Characteristic.SwingMode.SWING_ENABLED;
     }
 
-    return Characteristic.SwingMode.SWING_DISABLED;
+    return this._api.hap.Characteristic.SwingMode.SWING_DISABLED;
   };
 
   setSwingMode = async (state: any) => {
     const limits =
-      state === Characteristic.SwingMode.SWING_ENABLED ? Limits.ONLY_VERTICAL : Limits.OFF;
+      state === this._api.hap.Characteristic.SwingMode.SWING_ENABLED
+        ? Limits.ONLY_VERTICAL
+        : Limits.OFF;
     try {
       await this._device.changeState({ limits });
     } catch (error) {
