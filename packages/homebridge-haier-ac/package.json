@@ -26,8 +26,8 @@
     "build": "rm -rf ./dist/ && ../../node_modules/.bin/tsc --project ./tsconfig.build.json"
   },
   "engines": {
-    "node": ">=8.3.0",
-    "homebridge": ">=0.4.38"
+    "node": ">=12.0.0",
+    "homebridge": ">=1.1.0"
   },
   "dependencies": {
     "haier-ac-remote": "^0.1.1"
