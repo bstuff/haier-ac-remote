@@ -51,22 +51,22 @@ export class HapHaierAC {
 
     // Device info
     info
-      .setCharacteristic(api.hap.Characteristic.Manufacturer, 'Haier')
-      .setCharacteristic(api.hap.Characteristic.Model, 'AirCond')
-      .setCharacteristic(api.hap.Characteristic.SerialNumber, 'Undefined');
+      .setCharacteristic(this._api.hap.Characteristic.Manufacturer, 'Haier')
+      .setCharacteristic(this._api.hap.Characteristic.Model, 'AirCond')
+      .setCharacteristic(this._api.hap.Characteristic.SerialNumber, 'Undefined');
 
     // Active
     thermostatService
-      .getCharacteristic(api.hap.Characteristic.TargetHeatingCoolingState)
+      .getCharacteristic(this._api.hap.Characteristic.TargetHeatingCoolingState)
       .on('get', callbackify(this.getTargetHeatingCoolingState))
       .on('set', callbackify(this.setTargetHeatingCoolingState));
 
     thermostatService
-      .getCharacteristic(api.hap.Characteristic.CurrentTemperature)
+      .getCharacteristic(this._api.hap.Characteristic.CurrentTemperature)
       .on('get', callbackify(this.getCurrentTemperature));
 
     thermostatService
-      .getCharacteristic(api.hap.Characteristic.TargetTemperature)
+      .getCharacteristic(this._api.hap.Characteristic.TargetTemperature)
       .setProps({
         minValue: 16,
         maxValue: 30,
@@ -76,12 +76,12 @@ export class HapHaierAC {
       .on('set', callbackify(this.setTargetTemperature));
 
     fanService
-      .getCharacteristic(api.hap.Characteristic.SwingMode)
+      .getCharacteristic(this._api.hap.Characteristic.SwingMode)
       .on('get', callbackify(this.getSwingMode))
       .on('set', callbackify(this.setSwingMode));
 
     fanService
-      .getCharacteristic(api.hap.Characteristic.RotationSpeed)
+      .getCharacteristic(this._api.hap.Characteristic.RotationSpeed)
       .setProps({
         minValue: 0,
         maxValue: 3,
@@ -91,7 +91,7 @@ export class HapHaierAC {
       .on('set', callbackify(this.setRotationSpeed));
 
     lightService
-      .getCharacteristic(api.hap.Characteristic.On)
+      .getCharacteristic(this._api.hap.Characteristic.On)
       .on('get', callbackify(this.getHealthMode))
       .on('set', callbackify(this.setHealthMode));
   }
