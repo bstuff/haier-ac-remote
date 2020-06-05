@@ -15,7 +15,7 @@ $ npm install haier-ac-remote
 see example [here](src/examples/index.ts)
 
 1. `git clone git@github.com:bstuff/haier-ac-remote.git`
-2. `cd haier-ac-remote`
+2. `cd packages/haier-ac-remote`
 3. `npm install`
 4. Write `ip` and `mac` of your haier conditioner in `src/examples/index.ts`.
 5. Run `npm run example`
