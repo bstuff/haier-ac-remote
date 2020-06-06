@@ -186,6 +186,10 @@ export class HaierAC {
     this._seq = (this._seq + 1) % 256;
     send(this._client, cmd);
 
-    return o$.toPromise();
+    return o$.toPromise().catch(() => {
+      this._connect();
+
+      return false;
+    });
   }
 }
