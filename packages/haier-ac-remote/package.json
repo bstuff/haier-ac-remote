@@ -1,6 +1,6 @@
 {
   "name": "haier-ac-remote",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "A node module remote controller for Haier air conditioner",
   "keywords": [
     "haier",
