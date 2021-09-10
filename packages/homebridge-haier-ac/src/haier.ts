@@ -53,7 +53,7 @@ export class HapHaierAC {
     info
       .setCharacteristic(this._api.hap.Characteristic.Manufacturer, 'Haier')
       .setCharacteristic(this._api.hap.Characteristic.Model, 'AirCond')
-      .setCharacteristic(this._api.hap.Characteristic.SerialNumber, 'Undefined');
+      .setCharacteristic(this._api.hap.Characteristic.SerialNumber, config.mac);
 
     // Active
     thermostatService
