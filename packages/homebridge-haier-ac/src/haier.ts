@@ -72,7 +72,7 @@ export class HapHaierAC {
         maxValue: 30,
         minStep: 1,
       })
-      .on('get', callbackify(this.getCurrentTemperature))
+      .on('get', callbackify(this.getTargetTemperature))
       .on('set', callbackify(this.setTargetTemperature));
 
     fanService
