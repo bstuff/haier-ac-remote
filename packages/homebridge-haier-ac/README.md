@@ -15,7 +15,7 @@ Homebridge plugin for controlling Haier Air Conditioner
      - `ip` - IP address of air conditioner
      - `mac` - MAC address of air conditioner in format `0001325476AC`
    - Optional parameters:
-     - `treatAutoHeatAs` - `fan`/`smart` (default `fan`). Select mode binded to 'auto' in homekit
+     - `treatAutoHeatAs` - `fan`/`smart` (default `fan`). Which AC mode HomeKit's `AUTO` maps to
 
 ## config.json
 
@@ -31,12 +31,26 @@ Homebridge plugin for controlling Haier Air Conditioner
 ]
 ```
 
+## How it appears in HomeKit
+
+The AC is exposed as a native **Heater Cooler** accessory (plus a small switch):
+
+| HomeKit control               | Maps to                                     |
+| ----------------------------- | ------------------------------------------- |
+| On / Off (`Active`)           | Power                                       |
+| Mode `AUTO` / `HEAT` / `COOL` | `treatAutoHeatAs` (smart/fan) / heat / cool |
+| Current temperature           | Sensor reading from the AC                  |
+| Target temperature            | Cooling/heating threshold, 16–30 °C         |
+| Fan speed                     | `0%` = auto, then low / medium / high       |
+| Swing                         | Vertical louver                             |
+| **Health** switch             | Ionizer / health mode                       |
+
+Changes made with the physical remote are pushed back to HomeKit automatically.
+
+> Fan speed uses `0%` to mean **automatic** (on/off is a separate `Active` control on
+> a Heater Cooler, so `0%` is a valid "auto" speed rather than "off").
+
 ## Features
 
-- Turning AC on and off
-- Getting and setting target temperature
-- Getting current temperature
-- Getting and setting mode
-- Getting and setting swing mode
-- Getting and setting wind level
-- Reacting to changes made by using AC's remote
+- Power on/off, mode, target/current temperature, fan speed, swing, health
+- Reacts to changes made with the AC's own remote

@@ -1,251 +1,268 @@
 import { FanSpeed, HaierAC, Limits, Mode } from 'haier-ac-remote';
-import { API, Logger, AccessoryConfig } from 'homebridge';
+import {
+  AccessoryConfig,
+  AccessoryPlugin,
+  API,
+  CharacteristicValue,
+  Logging,
+  Service,
+} from 'homebridge';
 
-export class HapHaierAC {
-  protected readonly _api: API;
-  services: any[];
-  on = 1;
-  _device: HaierAC;
-  log: Logger;
-  autoMode: Mode;
-  name: string;
+export class HapHaierAC implements AccessoryPlugin {
+  protected readonly api: API;
+  protected readonly log: Logging;
+  protected readonly device: HaierAC;
+  protected readonly name: string;
+  protected readonly autoMode: Mode;
 
-  constructor(log: Logger, baseConfig: AccessoryConfig, api: API) {
-    const config = Object.assign(
-      {
-        timeout: 3000,
-        treatAutoHeatAs: 'fan',
-      },
-      baseConfig,
-    );
+  protected readonly informationService: Service;
+  protected readonly heaterCooler: Service;
+  protected readonly healthSwitch: Service;
 
-    if (!config.ip) throw new Error('Your must provide IP address of the AC');
-    if (!config.mac) throw new Error('Your must provide mac of the AC');
+  constructor(log: Logging, baseConfig: AccessoryConfig, api: API) {
+    const config = Object.assign({ timeout: 3000, treatAutoHeatAs: 'fan' }, baseConfig);
 
-    const info = new api.hap.Service.AccessoryInformation();
-    const thermostatService = new api.hap.Service.Thermostat();
-    const fanService = new api.hap.Service.Fanv2('Fan speed');
-    const lightService = new api.hap.Service.Lightbulb('Health');
+    if (!config.ip) throw new Error('You must provide the IP address of the AC');
+    if (!config.mac) throw new Error('You must provide the MAC of the AC');
 
+    this.api = api;
     this.log = log;
-    this._api = api;
     this.name = config.name;
-    this.services = [info, thermostatService, fanService, lightService];
-    this.autoMode = config.treatAutoHeatAs === 'fan' ? Mode.FAN : Mode.SMART;
-    this._device = new HaierAC({
-      ip: config.ip,
-      mac: config.mac,
-      timeout: config.timeout,
-    });
+    this.autoMode = config.treatAutoHeatAs === 'smart' ? Mode.SMART : Mode.FAN;
+    this.device = new HaierAC({ ip: config.ip, mac: config.mac, timeout: config.timeout });
 
-    // Device info
-    info
-      .setCharacteristic(this._api.hap.Characteristic.Manufacturer, 'Haier')
-      .setCharacteristic(this._api.hap.Characteristic.Model, 'AirCond')
-      .setCharacteristic(this._api.hap.Characteristic.SerialNumber, config.mac);
+    const { Characteristic } = api.hap;
 
-    // Active
-    thermostatService
-      .getCharacteristic(this._api.hap.Characteristic.TargetHeatingCoolingState)
-      .onGet(this.getTargetHeatingCoolingState)
-      .onSet(this.setTargetHeatingCoolingState);
+    this.informationService = new api.hap.Service.AccessoryInformation()
+      .setCharacteristic(Characteristic.Manufacturer, 'Haier')
+      .setCharacteristic(Characteristic.Model, 'AirCond')
+      .setCharacteristic(Characteristic.SerialNumber, config.mac);
 
-    thermostatService
-      .getCharacteristic(this._api.hap.Characteristic.CurrentTemperature)
+    // Air conditioner -> native HeaterCooler service
+    this.heaterCooler = new api.hap.Service.HeaterCooler(this.name);
+
+    this.heaterCooler
+      .getCharacteristic(Characteristic.Active)
+      .onGet(this.getActive)
+      .onSet(this.setActive);
+
+    this.heaterCooler
+      .getCharacteristic(Characteristic.CurrentHeaterCoolerState)
+      .onGet(this.getCurrentHeaterCoolerState);
+
+    this.heaterCooler
+      .getCharacteristic(Characteristic.TargetHeaterCoolerState)
+      .setProps({
+        validValues: [
+          Characteristic.TargetHeaterCoolerState.AUTO,
+          Characteristic.TargetHeaterCoolerState.HEAT,
+          Characteristic.TargetHeaterCoolerState.COOL,
+        ],
+      })
+      .onGet(this.getTargetHeaterCoolerState)
+      .onSet(this.setTargetHeaterCoolerState);
+
+    this.heaterCooler
+      .getCharacteristic(Characteristic.CurrentTemperature)
       .onGet(this.getCurrentTemperature);
 
-    thermostatService
-      .getCharacteristic(this._api.hap.Characteristic.TargetTemperature)
-      .setProps({
-        minValue: 16,
-        maxValue: 30,
-        minStep: 1,
-      })
+    const tempProps = { minValue: 16, maxValue: 30, minStep: 1 };
+    this.heaterCooler
+      .getCharacteristic(Characteristic.CoolingThresholdTemperature)
+      .setProps(tempProps)
+      .onGet(this.getTargetTemperature)
+      .onSet(this.setTargetTemperature);
+    this.heaterCooler
+      .getCharacteristic(Characteristic.HeatingThresholdTemperature)
+      .setProps(tempProps)
       .onGet(this.getTargetTemperature)
       .onSet(this.setTargetTemperature);
 
-    fanService
-      .getCharacteristic(this._api.hap.Characteristic.SwingMode)
-      .onGet(this.getSwingMode)
-      .onSet(this.setSwingMode);
-
-    fanService
-      .getCharacteristic(this._api.hap.Characteristic.RotationSpeed)
-      .setProps({
-        minValue: 0,
-        maxValue: 3,
-        minStep: 1,
-      })
+    this.heaterCooler
+      .getCharacteristic(Characteristic.RotationSpeed)
+      .setProps({ minValue: 0, maxValue: 100, minStep: 1 })
       .onGet(this.getRotationSpeed)
       .onSet(this.setRotationSpeed);
 
-    lightService
-      .getCharacteristic(this._api.hap.Characteristic.On)
-      .onGet(this.getHealthMode)
-      .onSet(this.setHealthMode);
+    this.heaterCooler
+      .getCharacteristic(Characteristic.SwingMode)
+      .onGet(this.getSwingMode)
+      .onSet(this.setSwingMode);
+
+    // Health / ionizer -> honest Switch (was a Lightbulb)
+    this.healthSwitch = new api.hap.Service.Switch(`${this.name} Health`, 'health');
+    this.healthSwitch
+      .getCharacteristic(Characteristic.On)
+      .onGet(this.getHealth)
+      .onSet(this.setHealth);
+
+    // Reflect changes made from the physical remote back into HomeKit.
+    this.device.state$.subscribe(this.pushState);
   }
 
-  getServices() {
-    return this.services;
+  getServices(): Service[] {
+    return [this.informationService, this.heaterCooler, this.healthSwitch];
   }
 
-  /**
-   * TargetHeatingCoolingState: [Function] {
-   *   UUID: '00000033-0000-1000-8000-0026BB765291',
-   *   OFF: 0,
-   *   HEAT: 1,
-   *   COOL: 2,
-   *   AUTO: 3
-   * },
-   */
-  getTargetHeatingCoolingState = async () => {
-    const { power, mode } = this._device.state$.value;
+  protected pushState = () => {
+    const { Characteristic } = this.api.hap;
+    this.heaterCooler.updateCharacteristic(Characteristic.Active, this.getActive());
+    this.heaterCooler.updateCharacteristic(
+      Characteristic.CurrentHeaterCoolerState,
+      this.getCurrentHeaterCoolerState(),
+    );
+    this.heaterCooler.updateCharacteristic(
+      Characteristic.TargetHeaterCoolerState,
+      this.getTargetHeaterCoolerState(),
+    );
+    this.heaterCooler.updateCharacteristic(
+      Characteristic.CurrentTemperature,
+      this.getCurrentTemperature(),
+    );
+    this.heaterCooler.updateCharacteristic(
+      Characteristic.CoolingThresholdTemperature,
+      this.getTargetTemperature(),
+    );
+    this.heaterCooler.updateCharacteristic(
+      Characteristic.HeatingThresholdTemperature,
+      this.getTargetTemperature(),
+    );
+    this.heaterCooler.updateCharacteristic(Characteristic.RotationSpeed, this.getRotationSpeed());
+    this.heaterCooler.updateCharacteristic(Characteristic.SwingMode, this.getSwingMode());
+    this.healthSwitch.updateCharacteristic(Characteristic.On, this.getHealth());
+  };
 
-    if (!power) {
-      return this._api.hap.Characteristic.TargetHeatingCoolingState.OFF;
-    }
+  // ---- getters (read synchronously from the reactive state) ----
 
-    switch (mode) {
+  protected getActive = (): CharacteristicValue => {
+    const { Active } = this.api.hap.Characteristic;
+    return this.device.state$.value.power ? Active.ACTIVE : Active.INACTIVE;
+  };
+
+  protected getCurrentHeaterCoolerState = (): CharacteristicValue => {
+    const { CurrentHeaterCoolerState } = this.api.hap.Characteristic;
+    const { power, mode } = this.device.state$.value;
+
+    if (!power) return CurrentHeaterCoolerState.INACTIVE;
+    if (mode === Mode.HEAT) return CurrentHeaterCoolerState.HEATING;
+    if (mode === Mode.COOL) return CurrentHeaterCoolerState.COOLING;
+
+    return CurrentHeaterCoolerState.IDLE;
+  };
+
+  protected getTargetHeaterCoolerState = (): CharacteristicValue => {
+    const { TargetHeaterCoolerState } = this.api.hap.Characteristic;
+
+    switch (this.device.state$.value.mode) {
       case Mode.HEAT:
-        return this._api.hap.Characteristic.TargetHeatingCoolingState.HEAT;
+        return TargetHeaterCoolerState.HEAT;
       case Mode.COOL:
-        return this._api.hap.Characteristic.TargetHeatingCoolingState.COOL;
+        return TargetHeaterCoolerState.COOL;
       default:
-        return this._api.hap.Characteristic.TargetHeatingCoolingState.AUTO;
+        return TargetHeaterCoolerState.AUTO;
     }
   };
 
-  setTargetHeatingCoolingState = async (state: any) => {
-    const { mode, power } = this._device.state$.value;
-    try {
-      if (state === this._api.hap.Characteristic.TargetHeatingCoolingState.OFF) {
-        if (power) {
-          await this._device.off();
-        }
-
-        return;
-      }
-
-      switch (state) {
-        case this._api.hap.Characteristic.TargetHeatingCoolingState.HEAT:
-          if (mode !== Mode.HEAT) {
-            await this._device.changeState({
-              mode: Mode.HEAT,
-            });
-          }
-
-          return;
-        case this._api.hap.Characteristic.TargetHeatingCoolingState.COOL:
-          if (mode !== Mode.COOL) {
-            await this._device.changeState({
-              mode: Mode.COOL,
-            });
-          }
-
-          return;
-        default:
-          if (mode !== this.autoMode || !power) {
-            await this._device.changeState({
-              mode: this.autoMode,
-            });
-          }
-
-          return;
-      }
-    } catch (error) {
-      this.log.error(String(error));
-    }
+  protected getCurrentTemperature = (): CharacteristicValue => {
+    return this.device.state$.value.currentTemperature;
   };
 
-  getCurrentTemperature = async () => {
-    return this._device.state$.value.currentTemperature;
+  protected getTargetTemperature = (): CharacteristicValue => {
+    return this.device.state$.value.targetTemperature;
   };
 
-  getHealthMode = async () => {
-    return +this._device.state$.value.health;
-  };
-
-  setHealthMode = async (state: any) => {
-    try {
-      await this._device.changeState({
-        health: Boolean(state),
-      });
-    } catch (error) {
-      this.log.error(String(error));
-    }
-  };
-
-  getTargetTemperature = async () => {
-    return this._device.state$.value.targetTemperature;
-  };
-
-  setTargetTemperature = async (state: any) => {
-    try {
-      await this._device.changeState({
-        targetTemperature: state,
-      });
-    } catch (error) {
-      this.log.error(String(error));
-    }
-  };
-
-  getSwingMode = async () => {
-    const { power, limits } = this._device.state$.value;
-
-    if (limits === Limits.ONLY_VERTICAL && power) {
-      return this._api.hap.Characteristic.SwingMode.SWING_ENABLED;
-    }
-
-    return this._api.hap.Characteristic.SwingMode.SWING_DISABLED;
-  };
-
-  setSwingMode = async (state: any) => {
-    const limits =
-      state === this._api.hap.Characteristic.SwingMode.SWING_ENABLED
-        ? Limits.ONLY_VERTICAL
-        : Limits.OFF;
-    try {
-      await this._device.changeState({ limits });
-    } catch (error) {
-      this.log.error(String(error));
-    }
-  };
-
-  getRotationSpeed = async () => {
-    const { fanSpeed } = this._device.state$.value;
-
-    switch (fanSpeed) {
+  protected getRotationSpeed = (): CharacteristicValue => {
+    switch (this.device.state$.value.fanSpeed) {
       case FanSpeed.MIN:
-        return 1;
+        return 33;
       case FanSpeed.MID:
-        return 2;
+        return 66;
       case FanSpeed.MAX:
-        return 3;
+        return 100;
       default:
       case FanSpeed.AUTO:
-        return 0;
+        return 0; // 0% represents automatic fan speed
     }
   };
 
-  setRotationSpeed = async (state: any) => {
-    const { mode } = this._device.state$.value;
+  protected getSwingMode = (): CharacteristicValue => {
+    const { SwingMode } = this.api.hap.Characteristic;
+    const { power, limits } = this.device.state$.value;
 
-    let fanSpeed = FanSpeed.AUTO;
+    return power && limits === Limits.ONLY_VERTICAL
+      ? SwingMode.SWING_ENABLED
+      : SwingMode.SWING_DISABLED;
+  };
 
-    if (state > 0 || (state === 0 && mode === Mode.FAN)) {
-      fanSpeed = FanSpeed.MIN;
+  protected getHealth = (): CharacteristicValue => {
+    return this.device.state$.value.health;
+  };
+
+  // ---- setters ----
+
+  protected setActive = async (value: CharacteristicValue) => {
+    const { Active } = this.api.hap.Characteristic;
+    try {
+      if (value === Active.ACTIVE) {
+        if (!this.device.state$.value.power) await this.device.on();
+      } else if (this.device.state$.value.power) {
+        await this.device.off();
+      }
+    } catch (error) {
+      this.log.error(String(error));
     }
+  };
 
-    if (state > 1) {
-      fanSpeed = FanSpeed.MID;
-    }
-
-    if (state > 2) {
-      fanSpeed = FanSpeed.MAX;
-    }
+  protected setTargetHeaterCoolerState = async (value: CharacteristicValue) => {
+    const { TargetHeaterCoolerState } = this.api.hap.Characteristic;
+    let mode = this.autoMode;
+    if (value === TargetHeaterCoolerState.HEAT) mode = Mode.HEAT;
+    else if (value === TargetHeaterCoolerState.COOL) mode = Mode.COOL;
 
     try {
-      await this._device.changeState({ fanSpeed });
+      if (this.device.state$.value.mode !== mode) {
+        await this.device.changeState({ mode });
+      }
+    } catch (error) {
+      this.log.error(String(error));
+    }
+  };
+
+  protected setTargetTemperature = async (value: CharacteristicValue) => {
+    try {
+      await this.device.changeState({ targetTemperature: Number(value) });
+    } catch (error) {
+      this.log.error(String(error));
+    }
+  };
+
+  protected setRotationSpeed = async (value: CharacteristicValue) => {
+    const speed = Number(value);
+    let fanSpeed = FanSpeed.AUTO;
+    if (speed > 0 && speed <= 33) fanSpeed = FanSpeed.MIN;
+    else if (speed > 33 && speed <= 66) fanSpeed = FanSpeed.MID;
+    else if (speed > 66) fanSpeed = FanSpeed.MAX;
+
+    try {
+      await this.device.changeState({ fanSpeed });
+    } catch (error) {
+      this.log.error(String(error));
+    }
+  };
+
+  protected setSwingMode = async (value: CharacteristicValue) => {
+    const { SwingMode } = this.api.hap.Characteristic;
+    const limits = value === SwingMode.SWING_ENABLED ? Limits.ONLY_VERTICAL : Limits.OFF;
+    try {
+      await this.device.changeState({ limits });
+    } catch (error) {
+      this.log.error(String(error));
+    }
+  };
+
+  protected setHealth = async (value: CharacteristicValue) => {
+    try {
+      await this.device.changeState({ health: Boolean(value) });
     } catch (error) {
       this.log.error(String(error));
     }
