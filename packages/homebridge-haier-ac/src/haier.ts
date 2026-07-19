@@ -1,8 +1,6 @@
 import { FanSpeed, HaierAC, Limits, Mode } from 'haier-ac-remote';
 import { API, Logger, AccessoryConfig } from 'homebridge';
 
-import { callbackify } from './callbackify';
-
 export class HapHaierAC {
   protected readonly _api: API;
   services: any[];
@@ -49,12 +47,12 @@ export class HapHaierAC {
     // Active
     thermostatService
       .getCharacteristic(this._api.hap.Characteristic.TargetHeatingCoolingState)
-      .on('get', callbackify(this.getTargetHeatingCoolingState))
-      .on('set', callbackify(this.setTargetHeatingCoolingState));
+      .onGet(this.getTargetHeatingCoolingState)
+      .onSet(this.setTargetHeatingCoolingState);
 
     thermostatService
       .getCharacteristic(this._api.hap.Characteristic.CurrentTemperature)
-      .on('get', callbackify(this.getCurrentTemperature));
+      .onGet(this.getCurrentTemperature);
 
     thermostatService
       .getCharacteristic(this._api.hap.Characteristic.TargetTemperature)
@@ -63,13 +61,13 @@ export class HapHaierAC {
         maxValue: 30,
         minStep: 1,
       })
-      .on('get', callbackify(this.getCurrentTemperature))
-      .on('set', callbackify(this.setTargetTemperature));
+      .onGet(this.getCurrentTemperature)
+      .onSet(this.setTargetTemperature);
 
     fanService
       .getCharacteristic(this._api.hap.Characteristic.SwingMode)
-      .on('get', callbackify(this.getSwingMode))
-      .on('set', callbackify(this.setSwingMode));
+      .onGet(this.getSwingMode)
+      .onSet(this.setSwingMode);
 
     fanService
       .getCharacteristic(this._api.hap.Characteristic.RotationSpeed)
@@ -78,13 +76,13 @@ export class HapHaierAC {
         maxValue: 3,
         minStep: 1,
       })
-      .on('get', callbackify(this.getRotationSpeed))
-      .on('set', callbackify(this.setRotationSpeed));
+      .onGet(this.getRotationSpeed)
+      .onSet(this.setRotationSpeed);
 
     lightService
       .getCharacteristic(this._api.hap.Characteristic.On)
-      .on('get', callbackify(this.getHealthMode))
-      .on('set', callbackify(this.setHealthMode));
+      .onGet(this.getHealthMode)
+      .onSet(this.setHealthMode);
   }
 
   getServices() {
@@ -229,7 +227,7 @@ export class HapHaierAC {
     }
   };
 
-  setRotationSpeed = async (state: number) => {
+  setRotationSpeed = async (state: any) => {
     const { mode } = this._device.state$.value;
 
     let fanSpeed = FanSpeed.AUTO;
