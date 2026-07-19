@@ -2,8 +2,16 @@ import _debug from 'debug';
 import { hexy } from 'hexy';
 import pickBy from 'lodash/pickBy';
 import { Socket } from 'net';
-import { BehaviorSubject, from, fromEvent, Subject, throwError } from 'rxjs';
-import { filter, mapTo, take, timeout, catchError } from 'rxjs/operators';
+import {
+  BehaviorSubject,
+  from,
+  fromEvent,
+  Subject,
+  throwError,
+  firstValueFrom,
+  lastValueFrom,
+} from 'rxjs';
+import { filter, map, take, timeout, catchError } from 'rxjs/operators';
 
 import { FanSpeed, Limits, Mode, State } from './_types';
 import * as commands from './lib/commands';
@@ -63,11 +71,9 @@ export class HaierAC {
   constructor(options: ConstructorOptions) {
     const { ip, mac, timeout = 500 } = options;
 
-    Object.assign(this, {
-      ip,
-      mac,
-      timeout,
-    });
+    this.ip = ip;
+    this.mac = mac;
+    this.timeout = timeout;
 
     this._client.setTimeout(this.timeout);
 
@@ -90,12 +96,13 @@ export class HaierAC {
           this.state$.next(nextStateRaw);
         }
       } catch (error) {
-        logError(error.message);
+        logError(error instanceof Error ? error.message : String(error));
       }
     });
 
     this._connect().catch(logError);
-    this._client.on('data', (data) => {
+    this._client.on('error', logError);
+    this._client.on('data', (data: Buffer) => {
       this._rawData$.next(data);
     });
     this._client.on('close', (err) => {
@@ -110,18 +117,18 @@ export class HaierAC {
   }
 
   protected _connect() {
-    return from(
-      new Promise((resolve) => {
-        this._client.connect(this.port, this.ip, resolve);
-      }),
-    )
-      .pipe(
+    return lastValueFrom(
+      from(
+        new Promise<void>((resolve) => {
+          this._client.connect(this.port, this.ip, () => resolve());
+        }),
+      ).pipe(
         timeout(this.timeout),
         catchError((err) =>
-          throwError(err.name === 'TimeoutError' ? 'connection timeout error' : err),
+          throwError(() => (err.name === 'TimeoutError' ? 'connection timeout error' : err)),
         ),
-      )
-      .toPromise();
+      ),
+    );
   }
 
   protected hello() {
@@ -176,17 +183,17 @@ export class HaierAC {
     const seq = this._seq;
     const cmd = createCommand(seq);
 
-    const o$ = fromEvent(theParser, 'parseCompleted').pipe(
-      filter<TheParserResult>((v) => v.seq === seq),
+    const o$ = fromEvent<TheParserResult>(theParser, 'parseCompleted').pipe(
+      filter((v) => v.seq === seq),
       take(1),
-      mapTo(true as true),
+      map(() => true as const),
       timeout(this.timeout),
     );
 
     this._seq = (this._seq + 1) % 256;
     send(this._client, cmd);
 
-    return o$.toPromise().catch(() => {
+    return firstValueFrom(o$).catch(() => {
       this._connect();
 
       return false;
