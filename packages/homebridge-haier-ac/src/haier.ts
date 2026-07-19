@@ -61,7 +61,7 @@ export class HapHaierAC {
         maxValue: 30,
         minStep: 1,
       })
-      .onGet(this.getCurrentTemperature)
+      .onGet(this.getTargetTemperature)
       .onSet(this.setTargetTemperature);
 
     fanService
