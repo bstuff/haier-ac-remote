@@ -1,6 +1,4 @@
-import { VoidCallback } from 'homebridge';
-
-export function callbackify(func: (...args: any[]) => Promise<any>): VoidCallback {
+export function callbackify(func: (...args: any[]) => Promise<any>): (...args: any[]) => void {
   return (...args: any[]) => {
     const onlyArgs: any[] = [];
     let maybeCallback: Function | null = null;

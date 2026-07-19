@@ -9,7 +9,7 @@
       // display name
       "name": "Air Conditioner",
       // 'fan' | 'smart'
-      "treatAutoHeatAs": "fan"
-    }
-  ]
+      "treatAutoHeatAs": "fan",
+    },
+  ],
 }

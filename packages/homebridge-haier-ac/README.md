@@ -9,13 +9,13 @@ Homebridge plugin for controlling Haier Air Conditioner
 1. Install this plugin by running `npm install -g homebridge-haier-ac`.
 2. Assign static IP address to your AC (check your router settings to do that).
 3. Update your Homebridge `config.json`. Check `config-sample.jsonc` for reference.
-    - Required parameters:
-        - `accessory` - always "HaierAC"
-        - `name` - Name of your device
-        - `ip` - IP address of air conditioner
-        - `mac` - MAC address of air conditioner in format `0001325476AC`
-    - Optional parameters:
-        - `treatAutoHeatAs` - `fan`/`smart` (default `fan`). Select mode binded to 'auto' in homekit
+   - Required parameters:
+     - `accessory` - always "HaierAC"
+     - `name` - Name of your device
+     - `ip` - IP address of air conditioner
+     - `mac` - MAC address of air conditioner in format `0001325476AC`
+   - Optional parameters:
+     - `treatAutoHeatAs` - `fan`/`smart` (default `fan`). Select mode binded to 'auto' in homekit
 
 ## config.json
 

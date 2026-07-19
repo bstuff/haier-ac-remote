@@ -3,14 +3,6 @@ import { API, Logger, AccessoryConfig } from 'homebridge';
 
 import { callbackify } from './callbackify';
 
-type Config = {
-  ip: string;
-  mac: string;
-  name: string;
-  timeout?: number;
-  treatAutoHeatAs?: 'smart' | 'fan';
-} & AccessoryConfig;
-
 export class HapHaierAC {
   protected readonly _api: API;
   services: any[];
@@ -18,8 +10,9 @@ export class HapHaierAC {
   _device: HaierAC;
   log: Logger;
   autoMode: Mode;
+  name: string;
 
-  constructor(log: Logger, baseConfig: Config, api: API) {
+  constructor(log: Logger, baseConfig: AccessoryConfig, api: API) {
     const config = Object.assign(
       {
         timeout: 3000,
@@ -36,17 +29,15 @@ export class HapHaierAC {
     const fanService = new api.hap.Service.Fanv2('Fan speed');
     const lightService = new api.hap.Service.Lightbulb('Health');
 
-    Object.assign(this, {
-      log,
-      _api: api,
-      name: config.name,
-      services: [info, thermostatService, fanService, lightService],
-      autoMode: config.treatAutoHeatAs === 'fan' ? Mode.FAN : Mode.SMART,
-      _device: new HaierAC({
-        ip: config.ip,
-        mac: config.mac,
-        timeout: config.timeout,
-      }),
+    this.log = log;
+    this._api = api;
+    this.name = config.name;
+    this.services = [info, thermostatService, fanService, lightService];
+    this.autoMode = config.treatAutoHeatAs === 'fan' ? Mode.FAN : Mode.SMART;
+    this._device = new HaierAC({
+      ip: config.ip,
+      mac: config.mac,
+      timeout: config.timeout,
     });
 
     // Device info
@@ -164,7 +155,7 @@ export class HapHaierAC {
           return;
       }
     } catch (error) {
-      this.log.error(error);
+      this.log.error(String(error));
     }
   };
 
@@ -182,7 +173,7 @@ export class HapHaierAC {
         health: Boolean(state),
       });
     } catch (error) {
-      this.log.error(error);
+      this.log.error(String(error));
     }
   };
 
@@ -196,7 +187,7 @@ export class HapHaierAC {
         targetTemperature: state,
       });
     } catch (error) {
-      this.log.error(error);
+      this.log.error(String(error));
     }
   };
 
@@ -218,7 +209,7 @@ export class HapHaierAC {
     try {
       await this._device.changeState({ limits });
     } catch (error) {
-      this.log.error(error);
+      this.log.error(String(error));
     }
   };
 
@@ -258,7 +249,7 @@ export class HapHaierAC {
     try {
       await this._device.changeState({ fanSpeed });
     } catch (error) {
-      this.log.error(error);
+      this.log.error(String(error));
     }
   };
 }
