@@ -1,13 +1,13 @@
-// Jest Snapshot v1, https://goo.gl/fbAQLP
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`HaierAC state$ should work 1`] = `
-Object {
+exports[`HaierAC > state$ > should work 1`] = `
+{
   "currentTemperature": 21,
   "fanSpeed": 2,
-  "health": 1,
+  "health": true,
   "limits": 0,
   "mode": 2,
-  "power": 9,
+  "power": true,
   "targetTemperature": 28,
 }
 `;

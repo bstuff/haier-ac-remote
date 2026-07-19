@@ -20,10 +20,11 @@ see example [here](src/examples/index.ts)
 4. Write `ip` and `mac` of your haier conditioner in `src/examples/index.ts`.
 5. Run `npm run example`
 6. use keyboard keys:
-  - `w` to power on
-  - `s` to power off
-  - `↑` to increase temperature
-  - `↓` to decrease temperature
+
+- `w` to power on
+- `s` to power off
+- `↑` to increase temperature
+- `↓` to decrease temperature
 
 #### Example usage in other projects
 

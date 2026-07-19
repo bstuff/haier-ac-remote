@@ -1,16 +1,6 @@
 import { FanSpeed, HaierAC, Limits, Mode } from 'haier-ac-remote';
 import { API, Logger, AccessoryConfig } from 'homebridge';
 
-import { callbackify } from './callbackify';
-
-type Config = {
-  ip: string;
-  mac: string;
-  name: string;
-  timeout?: number;
-  treatAutoHeatAs?: 'smart' | 'fan';
-} & AccessoryConfig;
-
 export class HapHaierAC {
   protected readonly _api: API;
   services: any[];
@@ -18,8 +8,9 @@ export class HapHaierAC {
   _device: HaierAC;
   log: Logger;
   autoMode: Mode;
+  name: string;
 
-  constructor(log: Logger, baseConfig: Config, api: API) {
+  constructor(log: Logger, baseConfig: AccessoryConfig, api: API) {
     const config = Object.assign(
       {
         timeout: 3000,
@@ -36,17 +27,15 @@ export class HapHaierAC {
     const fanService = new api.hap.Service.Fanv2('Fan speed');
     const lightService = new api.hap.Service.Lightbulb('Health');
 
-    Object.assign(this, {
-      log,
-      _api: api,
-      name: config.name,
-      services: [info, thermostatService, fanService, lightService],
-      autoMode: config.treatAutoHeatAs === 'fan' ? Mode.FAN : Mode.SMART,
-      _device: new HaierAC({
-        ip: config.ip,
-        mac: config.mac,
-        timeout: config.timeout,
-      }),
+    this.log = log;
+    this._api = api;
+    this.name = config.name;
+    this.services = [info, thermostatService, fanService, lightService];
+    this.autoMode = config.treatAutoHeatAs === 'fan' ? Mode.FAN : Mode.SMART;
+    this._device = new HaierAC({
+      ip: config.ip,
+      mac: config.mac,
+      timeout: config.timeout,
     });
 
     // Device info
@@ -58,12 +47,12 @@ export class HapHaierAC {
     // Active
     thermostatService
       .getCharacteristic(this._api.hap.Characteristic.TargetHeatingCoolingState)
-      .on('get', callbackify(this.getTargetHeatingCoolingState))
-      .on('set', callbackify(this.setTargetHeatingCoolingState));
+      .onGet(this.getTargetHeatingCoolingState)
+      .onSet(this.setTargetHeatingCoolingState);
 
     thermostatService
       .getCharacteristic(this._api.hap.Characteristic.CurrentTemperature)
-      .on('get', callbackify(this.getCurrentTemperature));
+      .onGet(this.getCurrentTemperature);
 
     thermostatService
       .getCharacteristic(this._api.hap.Characteristic.TargetTemperature)
@@ -72,13 +61,13 @@ export class HapHaierAC {
         maxValue: 30,
         minStep: 1,
       })
-      .on('get', callbackify(this.getTargetTemperature))
-      .on('set', callbackify(this.setTargetTemperature));
+      .onGet(this.getTargetTemperature)
+      .onSet(this.setTargetTemperature);
 
     fanService
       .getCharacteristic(this._api.hap.Characteristic.SwingMode)
-      .on('get', callbackify(this.getSwingMode))
-      .on('set', callbackify(this.setSwingMode));
+      .onGet(this.getSwingMode)
+      .onSet(this.setSwingMode);
 
     fanService
       .getCharacteristic(this._api.hap.Characteristic.RotationSpeed)
@@ -87,13 +76,13 @@ export class HapHaierAC {
         maxValue: 3,
         minStep: 1,
       })
-      .on('get', callbackify(this.getRotationSpeed))
-      .on('set', callbackify(this.setRotationSpeed));
+      .onGet(this.getRotationSpeed)
+      .onSet(this.setRotationSpeed);
 
     lightService
       .getCharacteristic(this._api.hap.Characteristic.On)
-      .on('get', callbackify(this.getHealthMode))
-      .on('set', callbackify(this.setHealthMode));
+      .onGet(this.getHealthMode)
+      .onSet(this.setHealthMode);
   }
 
   getServices() {
@@ -164,7 +153,7 @@ export class HapHaierAC {
           return;
       }
     } catch (error) {
-      this.log.error(error);
+      this.log.error(String(error));
     }
   };
 
@@ -182,7 +171,7 @@ export class HapHaierAC {
         health: Boolean(state),
       });
     } catch (error) {
-      this.log.error(error);
+      this.log.error(String(error));
     }
   };
 
@@ -196,7 +185,7 @@ export class HapHaierAC {
         targetTemperature: state,
       });
     } catch (error) {
-      this.log.error(error);
+      this.log.error(String(error));
     }
   };
 
@@ -218,7 +207,7 @@ export class HapHaierAC {
     try {
       await this._device.changeState({ limits });
     } catch (error) {
-      this.log.error(error);
+      this.log.error(String(error));
     }
   };
 
@@ -238,7 +227,7 @@ export class HapHaierAC {
     }
   };
 
-  setRotationSpeed = async (state: number) => {
+  setRotationSpeed = async (state: any) => {
     const { mode } = this._device.state$.value;
 
     let fanSpeed = FanSpeed.AUTO;
@@ -258,7 +247,7 @@ export class HapHaierAC {
     try {
       await this._device.changeState({ fanSpeed });
     } catch (error) {
-      this.log.error(error);
+      this.log.error(String(error));
     }
   };
 }

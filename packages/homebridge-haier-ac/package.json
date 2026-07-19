@@ -1,6 +1,6 @@
 {
   "name": "homebridge-haier-ac",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Haier AC plugin for Homebridge",
   "author": "Andrew Lavrentev <andrew.lavrentev@gmail.com>",
   "license": "MIT",
@@ -23,16 +23,17 @@
     "dist/"
   ],
   "scripts": {
-    "build": "rm -rf ./dist/ && ../../node_modules/.bin/tsc --project ./tsconfig.build.json"
+    "build": "rm -rf ./dist/ && ../../node_modules/.bin/tsc --project ./tsconfig.build.json",
+    "typecheck": "../../node_modules/.bin/tsc --noEmit --project ./tsconfig.json"
   },
   "engines": {
     "node": ">=12.0.0",
-    "homebridge": ">=1.1.0"
+    "homebridge": ">=1.3.0"
   },
   "dependencies": {
-    "haier-ac-remote": "^0.1.2"
+    "haier-ac-remote": "^0.2.0"
   },
   "devDependencies": {
-    "homebridge": "^1.1.0"
+    "homebridge": "^1.3.0"
   }
 }

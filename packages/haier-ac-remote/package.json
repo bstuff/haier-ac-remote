@@ -1,6 +1,6 @@
 {
   "name": "haier-ac-remote",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "A node module remote controller for Haier air conditioner",
   "keywords": [
     "haier",
@@ -29,14 +29,14 @@
     "build": "rm -rf ./dist/ && ../../node_modules/.bin/tsc --project ./tsconfig.build.json",
     "run:example": "DEBUG=* node ./dist/examples/index.js",
     "example": "rm -rf ./dist/ && ../../node_modules/.bin/tsc --project ./tsconfig.json && npm run run:example",
-    "test": "jest"
+    "typecheck": "../../node_modules/.bin/tsc --noEmit --project ./tsconfig.json",
+    "test": "vitest run"
   },
   "dependencies": {
-    "binary-parser": "^1.5.0",
-    "debug": "^4.1.1",
-    "hexy": "^0.3.0",
-    "lodash": "^4.17.21",
-    "rxjs": "^6.5.4"
-  },
-  "devDependencies": {}
+    "binary-parser": "^2.3.0",
+    "debug": "^4.4.3",
+    "hexy": "^0.4.0",
+    "lodash": "^4.18.1",
+    "rxjs": "^7.8.2"
+  }
 }
