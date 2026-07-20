@@ -107,7 +107,7 @@ export class HaierAC {
     });
     this._client.on('close', (err) => {
       if (!err) {
-        this._connect();
+        this._connect().catch(logError);
       }
 
       logError('Connection closed>>>');
@@ -194,7 +194,7 @@ export class HaierAC {
     send(this._client, cmd);
 
     return firstValueFrom(o$).catch(() => {
-      this._connect();
+      this._connect().catch(logError);
 
       return false;
     });
