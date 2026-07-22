@@ -2,12 +2,24 @@
 
 exports[`HaierAC > state$ > should work 1`] = `
 {
+  "airQuality": 0,
+  "auto": false,
+  "auxHeat": false,
+  "childLock": false,
+  "currentHumidity": 0,
   "currentTemperature": 21,
+  "dehumidify": false,
+  "eco": false,
   "fanSpeed": 2,
+  "freshAir": true,
   "health": true,
   "limits": 0,
   "mode": 2,
+  "outdoorTemperature": 0,
+  "pmValue": 0,
   "power": true,
+  "quiet": false,
   "targetTemperature": 28,
+  "turbo": false,
 }
 `;

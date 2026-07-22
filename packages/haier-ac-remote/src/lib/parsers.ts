@@ -2,26 +2,74 @@
 import { Parser } from 'binary-parser';
 import { EventEmitter } from 'events';
 
+// 6d01 status frame. Words are big-endian uint16; the opcode sits at word 5,
+// so spec group index N == word (5 + N):
+//   word6  grp1  actual temperature
+//   word7  grp2  outdoor temp (low byte) + air quality (high byte)
+//   word8  grp3  power consumption (low/high byte)
+//   word9  grp4  PM value (16-bit)
+//   word11 grp6  mode
+//   word12 grp7  fan speed
+//   word13 grp8  swing (bit0 up/down, bit1 left/right)
+//   word14 grp9  flags: bit0 power, bit1 aux-heat, bit2 auto, bit3 health,
+//                bit6 dehumidify, bit10 eco, bit11 F/C, bit15 child-lock
+//   word15 grp10 flags: bit0 fresh-air, bit1 turbo, bit2 quiet, ...
+//   word16 grp11 humidity (low byte actual, high byte setpoint)
+//   word17 grp12 set temperature (raw = °C - 16)
 export const stateParser = new Parser()
   .endianess('big')
   .uint16('start', { assert: 0xffff })
   .uint16('_', { assert: 0x2200 })
-  .uint16('_')
-  .uint16('_')
-  .uint16('_')
-  .uint16('_')
+  .uint16('_2')
+  .uint16('_3')
+  .uint16('_4')
+  .uint16('_5')
   .uint16('currentTemperature')
-  .uint16('_')
-  .uint16('_')
-  .uint16('_')
-  .uint16('_')
+  .uint16('sensorWord') // grp2: outdoor temp (lo) + air quality (hi)
+  .uint16('powerWord') // grp3: power consumption
+  .uint16('pmValue') // grp4: PM value
+  .uint16('_10')
   .uint16('mode')
   .uint16('fanSpeed')
   .uint16('limits')
-  .uint16('power')
-  .uint16('health')
-  .uint16('_')
+  .uint16('flags1') // grp9
+  .uint16('flags2') // grp10
+  .uint16('humidityWord') // grp11
   .uint16('targetTemperature');
+
+const bit = (word: number, n: number) => Boolean((word >> n) & 1);
+
+// A device response frame is: [00 00 27 15] + 76 header bytes (the byte at
+// offset 79 is the inner-frame length) + <innerLen> inner-frame bytes.
+const RESP_HEADER = Buffer.from([0x00, 0x00, 0x27, 0x15]);
+const RESP_HEADER_LEN = 80; // bytes before the inner frame; inner length at [79]
+
+// Pull complete response frames out of a TCP byte stream, returning the leftover
+// bytes so a frame split across 'data' events is reassembled instead of dropped.
+// Resynchronises past junk/misaligned bytes by scanning for the next header.
+export function extractFrames(buffer: Buffer): { frames: Buffer[]; rest: Buffer } {
+  const frames: Buffer[] = [];
+  let offset = 0;
+
+  for (;;) {
+    const idx = buffer.indexOf(RESP_HEADER, offset);
+    if (idx < 0) {
+      // No header ahead; keep only a possible partial header at the very end.
+      const keepFrom = Math.max(offset, buffer.length - (RESP_HEADER.length - 1));
+      return { frames, rest: buffer.subarray(keepFrom) };
+    }
+    if (buffer.length - idx < RESP_HEADER_LEN) {
+      return { frames, rest: buffer.subarray(idx) }; // not enough to read the length yet
+    }
+    const innerLen = buffer[idx + RESP_HEADER_LEN - 1];
+    const total = RESP_HEADER_LEN + innerLen;
+    if (buffer.length - idx < total) {
+      return { frames, rest: buffer.subarray(idx) }; // full frame not arrived yet
+    }
+    frames.push(buffer.subarray(idx, idx + total));
+    offset = idx + total;
+  }
+}
 
 enum CommandType {
   xz1 = 0x10,
@@ -229,13 +277,25 @@ export class TheParser extends EventEmitter {
 type Output = Omit<TheParserResult, 'command'> & {
   commandType: CommandType.state;
   state: {
-    currentTemperature: any;
-    targetTemperature: any;
+    currentTemperature: number;
+    targetTemperature: number;
     fanSpeed: any;
     mode: any;
-    health: any;
+    health: boolean;
     limits: any;
-    power: any;
+    power: boolean;
+    outdoorTemperature: number;
+    currentHumidity: number;
+    airQuality: number;
+    pmValue: number;
+    auxHeat: boolean;
+    auto: boolean;
+    dehumidify: boolean;
+    eco: boolean;
+    childLock: boolean;
+    freshAir: boolean;
+    turbo: boolean;
+    quiet: boolean;
   };
 };
 
@@ -246,23 +306,33 @@ export function parseState(parsedRes: TheParserResult[]): Output | null {
     ) as TheParserResult;
     const state = stateParser.parse(stateResponse.command);
 
+    const flags1: number = state.flags1; // grp9
+    const flags2: number = state.flags2; // grp10
+
     const nextState = {
       currentTemperature: state.currentTemperature,
       targetTemperature: state.targetTemperature + 16,
       fanSpeed: state.fanSpeed,
       mode: state.mode,
-      health: state.health,
       limits: state.limits,
-      power: state.power,
+      // power = grp9 bit0, health/anion = grp9 bit3 (both in flags1/word14).
+      power: bit(flags1, 0),
+      health: bit(flags1, 3),
+      // Telemetry
+      outdoorTemperature: state.sensorWord & 0xff,
+      airQuality: (state.sensorWord >> 8) & 0xff,
+      pmValue: state.pmValue,
+      currentHumidity: state.humidityWord & 0xff,
+      // Secondary flags (read-only)
+      auxHeat: bit(flags1, 1),
+      auto: bit(flags1, 2),
+      dehumidify: bit(flags1, 6),
+      eco: bit(flags1, 10),
+      childLock: bit(flags1, 15),
+      freshAir: bit(flags2, 0),
+      turbo: bit(flags2, 1),
+      quiet: bit(flags2, 2),
     };
-
-    if (typeof nextState.power === 'number') {
-      nextState.power = Boolean(nextState.power % 2);
-    }
-
-    if (typeof nextState.health === 'number') {
-      nextState.health = Boolean(nextState.health % 2);
-    }
 
     return {
       seq: stateResponse.seq,
