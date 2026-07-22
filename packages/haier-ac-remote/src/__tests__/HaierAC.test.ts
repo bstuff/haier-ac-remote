@@ -7,12 +7,17 @@ describe('HaierAC', () => {
 
   describe('state$', () => {
     beforeEach(() => {
-      ac = new HaierAC({ ip: '0.0.0.0', mac: '' });
+      ac = new HaierAC({ ip: '0.0.0.0', mac: '', autoConnect: false });
+    });
+
+    afterEach(() => {
+      ac.destroy();
     });
 
     it('should work', () => {
-      // @ts-ignore
-      ac._rawData$.next(
+      // Feed a real captured device response frame straight into the parser.
+      // @ts-ignore — exercising the internal ingest path
+      ac._onData(
         toHex(
           `00 00 27 15 00 00 00 00`,
           rawCommands.zero16(),

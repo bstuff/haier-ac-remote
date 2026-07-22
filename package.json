@@ -15,7 +15,6 @@
   },
   "devDependencies": {
     "@types/debug": "^4.1.13",
-    "@types/lodash": "^4.17.24",
     "@types/node": "^26.1.1",
     "@vitest/coverage-v8": "^4.1.10",
     "husky": "^9.1.7",
