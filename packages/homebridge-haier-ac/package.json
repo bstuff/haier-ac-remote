@@ -31,7 +31,7 @@
     "homebridge": ">=1.6.0"
   },
   "dependencies": {
-    "haier-ac-remote": "^0.2.0"
+    "haier-ac-remote": "^0.3.0"
   },
   "devDependencies": {
     "homebridge": "^2.2.1"
